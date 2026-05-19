@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cosmere Reading Order Map</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-2: #141a35;
+    --bg-3: #1c2447;
+    --text: #e8ecf7;
+    --muted: #8a93b3;
+    --border: #2a3358;
+    --accent: #7cc4ff;
+    --read-bg: #1a1f33;
+    --read-text: #5a6280;
+    --next: #ffb84d;
+    --arrow: #4a578a;
+    --arrow-soft: #2f3a64;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:
+      radial-gradient(ellipse at 20% 0%, #1a2350 0%, transparent 55%),
+      radial-gradient(ellipse at 100% 100%, #2a1850 0%, transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 36px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 6px 0 0;
+    max-width: 640px;
+  }
+  .controls { display: flex; gap: 8px; }
+  .btn {
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--bg-3); border-color: var(--accent); }
+  .stats {
+    padding: 14px 36px 6px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .stats strong { color: var(--next); font-weight: 600; }
+  .progress {
+    display: inline-block;
+    width: 180px;
+    height: 6px;
+    background: var(--bg-2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 8px;
+    vertical-align: middle;
+  }
+  .progress > div {
+    height: 100%;
+    background: linear-gradient(90deg, #6aa9ff, #b07ce4);
+    transition: width 0.3s;
+  }
+  .legend {
+    padding: 8px 36px 12px;
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    border: 2px solid;
+    background: var(--bg-2);
+  }
+  .legend-divider { color: var(--border); }
+  .legend-arrow {
+    display: inline-block;
+    width: 28px; height: 1px;
+    background: var(--arrow);
+    position: relative;
+    vertical-align: middle;
+  }
+  .legend-arrow.soft {
+    background: transparent;
+    border-top: 1px dashed var(--arrow-soft);
+  }
+  .map-wrap {
+    overflow: auto;
+    padding: 8px 36px 24px;
+  }
+  .map {
+    position: relative;
+    width: var(--map-w);
+    height: var(--map-h);
+  }
+  .map svg {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .book {
+    position: absolute;
+    width: 160px;
+    height: 86px;
+    background: var(--bg-2);
+    border: 2px solid var(--series-color, var(--border));
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 1;
+  }
+  .book:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    z-index: 3;
+  }
+  .book:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .book .series-tag {
+    font-size: 10px;
+    color: var(--series-color, var(--muted));
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+  }
+  .book .title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .book[data-type="novella"] .title {
+    font-style: italic;
+  }
+  .book.read {
+    background: var(--read-bg);
+    border-color: var(--read-bg);
+  }
+  .book.read .title { color: var(--read-text); text-decoration: line-through; }
+  .book.read .series-tag { color: var(--read-text); }
+  .book.read::after {
+    content: "";
+    position: absolute;
+    top: 6px; right: 8px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #4ea878;
+    box-shadow: inset 0 0 0 2px var(--read-bg);
+  }
+  .book.next {
+    border-color: var(--next);
+    box-shadow:
+      0 0 0 1px rgba(255, 184, 77, 0.3),
+      0 0 22px rgba(255, 184, 77, 0.35);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  .book.next .title { color: var(--next); }
+  .book.next .series-tag { color: var(--next); }
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px rgba(255, 184, 77, 0.3),
+        0 0 22px rgba(255, 184, 77, 0.35);
+    }
+    50% {
+      box-shadow:
+        0 0 0 3px rgba(255, 184, 77, 0.45),
+        0 0 34px rgba(255, 184, 77, 0.65);
+    }
+  }
+  .arrow {
+    fill: none;
+    stroke: var(--arrow);
+    stroke-width: 2;
+  }
+  .arrow.soft {
+    stroke: var(--arrow-soft);
+    stroke-dasharray: 5 4;
+  }
+  footer {
+    padding: 12px 36px 36px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    header { padding: 20px 18px 8px; }
+    .stats, .legend, .map-wrap, footer { padding-left: 18px; padding-right: 18px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>The Cosmere — Reading Order Map</h1>
+    <p class="subtitle">Click a book to mark it as read. Books glowing orange are ready to read next — all of their required prerequisites are done.</p>
+  </div>
+  <div class="controls">
+    <button class="btn" id="reset" title="Clear all read marks">Reset</button>
+  </div>
+</header>
+<div class="stats" id="stats"></div>
+<div class="legend" id="legend"></div>
+<div class="map-wrap">
+  <div class="map" id="map">
+    <svg id="arrows" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</div>
+<footer>
+  Inspired by the <a href="https://17thshard.github.io/reading-order/" target="_blank" rel="noopener">17th Shard reading order chart</a>.
+  Solid arrows mark required reading order (sequels). Dashed arrows mark soft recommendations for context or to avoid spoilers.
+</footer>
+<script>
+const SERIES = {
+  elantris:   { name: 'Elantris',           color: '#4fb3a9' },
+  mistborn1:  { name: 'Mistborn Era 1',     color: '#d05a60' },
+  mistborn2:  { name: 'Wax & Wayne',        color: '#cc8a48' },
+  warbreaker: { name: 'Warbreaker',         color: '#d9b14b' },
+  stormlight: { name: 'Stormlight Archive', color: '#6aa9ff' },
+  standalone: { name: 'Standalone & Novellas', color: '#b07ce4' },
+};
+
+// col/row grid coordinates (0-indexed)
+const BOOKS = [
+  { id: 'elantris',      title: 'Elantris',                       series: 'elantris',   col: 0, row: 0 },
+  { id: 'emperors_soul', title: "The Emperor's Soul",             series: 'elantris',   col: 1, row: 0, type: 'novella' },
+
+  { id: 'tfe', title: 'The Final Empire',      series: 'mistborn1', col: 0, row: 1 },
+  { id: 'woa', title: 'The Well of Ascension', series: 'mistborn1', col: 1, row: 1 },
+  { id: 'hoa', title: 'The Hero of Ages',      series: 'mistborn1', col: 2, row: 1 },
+
+  { id: 'aol', title: 'The Alloy of Law',      series: 'mistborn2', col: 3, row: 2 },
+  { id: 'sos', title: 'Shadows of Self',       series: 'mistborn2', col: 4, row: 2 },
+  { id: 'bom', title: 'The Bands of Mourning', series: 'mistborn2', col: 5, row: 2 },
+  { id: 'tlm', title: 'The Lost Metal',        series: 'mistborn2', col: 6, row: 2 },
+
+  { id: 'warbreaker', title: 'Warbreaker', series: 'warbreaker', col: 0, row: 3 },
+
+  { id: 'wok',         title: 'The Way of Kings',  series: 'stormlight', col: 0, row: 4 },
+  { id: 'wor',         title: 'Words of Radiance', series: 'stormlight', col: 1, row: 4 },
+  { id: 'edgedancer',  title: 'Edgedancer',        series: 'stormlight', col: 2, row: 4, type: 'novella' },
+  { id: 'oathbringer', title: 'Oathbringer',       series: 'stormlight', col: 3, row: 4 },
+  { id: 'dawnshard',   title: 'Dawnshard',         series: 'stormlight', col: 4, row: 4, type: 'novella' },
+  { id: 'row',         title: 'Rhythm of War',     series: 'stormlight', col: 5, row: 4 },
+  { id: 'wat',         title: 'Wind and Truth',    series: 'stormlight', col: 6, row: 4 },
+
+  { id: 'tress',  title: 'Tress of the Emerald Sea',         series: 'standalone', col: 2, row: 5 },
+  { id: 'yumi',   title: 'Yumi and the Nightmare Painter',   series: 'standalone', col: 4, row: 5 },
+  { id: 'sunlit', title: 'The Sunlit Man',                   series: 'standalone', col: 6, row: 5 },
+  { id: 'sixth',  title: 'Sixth of the Dusk',                series: 'standalone', col: 7, row: 5, type: 'novella' },
+];
+
+// [from, to, soft?]  hard edges gate "next"; soft edges are visual only.
+const EDGES = [
+  ['elantris', 'emperors_soul'],
+
+  ['tfe', 'woa'], ['woa', 'hoa'],
+  ['hoa', 'aol'],
+  ['aol', 'sos'], ['sos', 'bom'], ['bom', 'tlm'],
+
+  ['wok', 'wor'], ['wor', 'edgedancer'], ['edgedancer', 'oathbringer'],
+  ['oathbringer', 'dawnshard'], ['dawnshard', 'row'], ['row', 'wat'],
+
+  ['warbreaker', 'wor', true],
+  ['hoa',        'wor', true],
+  ['wor',        'tress', true],
+  ['row',        'sunlit'],
+  ['row',        'yumi', true],
+  ['tlm',        'wat',  true],
+];
+
+const CELL_W = 200;
+const CELL_H = 130;
+const MARGIN_X = 24;
+const MARGIN_Y = 24;
+const BOOK_W = 160;
+const BOOK_H = 86;
+
+const STORAGE_KEY = 'cosmere-read-state-v1';
+const readSet = new Set(loadState());
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...readSet]));
+  } catch (e) { /* ignore */ }
+}
+
+function bookPos(b) {
+  return {
+    x: MARGIN_X + b.col * CELL_W,
+    y: MARGIN_Y + b.row * CELL_H,
+  };
+}
+
+function hardPrereqs(bookId) {
+  return EDGES
+    .filter(([, to, soft]) => to === bookId && !soft)
+    .map(([from]) => from);
+}
+
+function isAvailable(book) {
+  if (readSet.has(book.id)) return false;
+  return hardPrereqs(book.id).every(p => readSet.has(p));
+}
+
+function arrowPath(a, b) {
+  const pa = bookPos(a), pb = bookPos(b);
+
+  // Same row: horizontal line, right edge of A to left edge of B
+  if (a.row === b.row) {
+    const ax = pa.x + BOOK_W, ay = pa.y + BOOK_H / 2;
+    const bx = pb.x,           by = pb.y + BOOK_H / 2;
+    return `M${ax},${ay} L${bx - 2},${by}`;
+  }
+
+  // Different row: route bottom → top with a smooth S-curve
+  const ax = pa.x + BOOK_W / 2;
+  const ay = pa.y + BOOK_H;
+  const bx = pb.x + BOOK_W / 2;
+  const by = pb.y;
+  const dy = by - ay;
+  const c  = Math.max(28, Math.abs(dy) * 0.5);
+  return `M${ax},${ay} C${ax},${ay + c} ${bx},${by - c} ${bx},${by - 2}`;
+}
+
+function render() {
+  const map = document.getElementById('map');
+  const svg = document.getElementById('arrows');
+
+  const maxCol = Math.max(...BOOKS.map(b => b.col));
+  const maxRow = Math.max(...BOOKS.map(b => b.row));
+  const W = MARGIN_X * 2 + (maxCol + 1) * CELL_W;
+  const H = MARGIN_Y * 2 + (maxRow + 1) * CELL_H;
+  map.style.setProperty('--map-w', W + 'px');
+  map.style.setProperty('--map-h', H + 'px');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+
+  svg.innerHTML = `
+    <defs>
+      <marker id="head" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="${getComputedStyle(document.documentElement).getPropertyValue('--arrow').trim()}"></path>
+      </marker>
+      <marker id="head-soft" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="${getComputedStyle(document.documentElement).getPropertyValue('--arrow-soft').trim()}"></path>
+      </marker>
+    </defs>
+  `;
+
+  const byId = Object.fromEntries(BOOKS.map(b => [b.id, b]));
+  const ns = 'http://www.w3.org/2000/svg';
+  for (const [from, to, soft] of EDGES) {
+    const a = byId[from], b = byId[to];
+    if (!a || !b) continue;
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', arrowPath(a, b));
+    path.setAttribute('class', 'arrow' + (soft ? ' soft' : ''));
+    path.setAttribute('marker-end', soft ? 'url(#head-soft)' : 'url(#head)');
+    svg.appendChild(path);
+  }
+
+  // Re-render book cards
+  map.querySelectorAll('.book').forEach(el => el.remove());
+  for (const b of BOOKS) {
+    const p = bookPos(b);
+    const el = document.createElement('div');
+    el.className = 'book';
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-pressed', readSet.has(b.id) ? 'true' : 'false');
+    el.setAttribute('aria-label', `${b.title}, ${SERIES[b.series].name}${readSet.has(b.id) ? ', read' : isAvailable(b) ? ', ready to read next' : ''}`);
+    if (readSet.has(b.id)) el.classList.add('read');
+    if (isAvailable(b))    el.classList.add('next');
+    if (b.type)            el.dataset.type = b.type;
+    el.style.left = p.x + 'px';
+    el.style.top  = p.y + 'px';
+    el.style.setProperty('--series-color', SERIES[b.series].color);
+
+    const tag = document.createElement('div');
+    tag.className = 'series-tag';
+    tag.textContent = SERIES[b.series].name + (b.type === 'novella' ? ' · Novella' : '');
+
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.textContent = b.title;
+
+    el.appendChild(tag);
+    el.appendChild(title);
+
+    el.addEventListener('click', () => toggle(b.id));
+    el.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggle(b.id);
+      }
+    });
+    map.appendChild(el);
+  }
+
+  renderStats();
+}
+
+function renderStats() {
+  const total = BOOKS.length;
+  const read  = readSet.size;
+  const pct   = Math.round((read / total) * 100);
+  const next  = BOOKS.filter(isAvailable);
+
+  let message;
+  if (read === 0) {
+    message = `Start anywhere. Common entry points: <strong>${next.map(b => b.title).join(' · ')}</strong>`;
+  } else if (read === total) {
+    message = `<strong>You've read the entire Cosmere.</strong>`;
+  } else if (next.length === 0) {
+    message = `No books currently unlocked.`;
+  } else {
+    message = `Up next: <strong>${next.map(b => b.title).join(' · ')}</strong>`;
+  }
+
+  document.getElementById('stats').innerHTML =
+    `<span>Read ${read} of ${total}</span>` +
+    `<span class="progress"><div style="width:${pct}%"></div></span>` +
+    `<span>${pct}%</span>` +
+    `<br>${message}`;
+}
+
+function toggle(id) {
+  if (readSet.has(id)) readSet.delete(id);
+  else readSet.add(id);
+  saveState();
+  render();
+}
+
+document.getElementById('reset').addEventListener('click', () => {
+  if (readSet.size === 0) return;
+  readSet.clear();
+  saveState();
+  render();
+});
+
+// Build legend
+const legend = document.getElementById('legend');
+const seriesItems = Object.values(SERIES).map(s =>
+  `<div class="legend-item"><span class="swatch" style="border-color:${s.color}"></span>${s.name}</div>`
+).join('');
+legend.innerHTML = seriesItems +
+  `<span class="legend-divider">|</span>` +
+  `<div class="legend-item"><span class="legend-arrow"></span>Required</div>` +
+  `<div class="legend-item"><span class="legend-arrow soft"></span>Recommended</div>`;
+
+render();
+</script>
+</body>
+</html>
