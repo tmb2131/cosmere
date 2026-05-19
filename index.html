@@ -263,12 +263,14 @@ const SERIES = {
 
 // col/row grid coordinates (0-indexed)
 const BOOKS = [
-  { id: 'elantris',      title: 'Elantris',                       series: 'elantris',   col: 0, row: 0 },
-  { id: 'emperors_soul', title: "The Emperor's Soul",             series: 'elantris',   col: 1, row: 0, type: 'novella' },
+  { id: 'elantris',         title: 'Elantris',                series: 'elantris', col: 0, row: 0 },
+  { id: 'hope_of_elantris', title: 'The Hope of Elantris',    series: 'elantris', col: 1, row: 0, type: 'novella' },
+  { id: 'emperors_soul',    title: "The Emperor's Soul",      series: 'elantris', col: 2, row: 0, type: 'novella' },
 
-  { id: 'tfe', title: 'The Final Empire',      series: 'mistborn1', col: 0, row: 1 },
-  { id: 'woa', title: 'The Well of Ascension', series: 'mistborn1', col: 1, row: 1 },
-  { id: 'hoa', title: 'The Hero of Ages',      series: 'mistborn1', col: 2, row: 1 },
+  { id: 'tfe',            title: 'The Final Empire',          series: 'mistborn1', col: 0, row: 1 },
+  { id: 'woa',            title: 'The Well of Ascension',     series: 'mistborn1', col: 1, row: 1 },
+  { id: 'hoa',            title: 'The Hero of Ages',          series: 'mistborn1', col: 2, row: 1 },
+  { id: 'secret_history', title: 'Mistborn: Secret History',  series: 'mistborn1', col: 3, row: 1, type: 'novella' },
 
   { id: 'aol', title: 'The Alloy of Law',      series: 'mistborn2', col: 3, row: 2 },
   { id: 'sos', title: 'Shadows of Self',       series: 'mistborn2', col: 4, row: 2 },
@@ -285,29 +287,45 @@ const BOOKS = [
   { id: 'row',         title: 'Rhythm of War',     series: 'stormlight', col: 5, row: 4 },
   { id: 'wat',         title: 'Wind and Truth',    series: 'stormlight', col: 6, row: 4 },
 
-  { id: 'tress',  title: 'Tress of the Emerald Sea',         series: 'standalone', col: 2, row: 5 },
-  { id: 'yumi',   title: 'Yumi and the Nightmare Painter',   series: 'standalone', col: 4, row: 5 },
-  { id: 'sunlit', title: 'The Sunlit Man',                   series: 'standalone', col: 6, row: 5 },
-  { id: 'sixth',  title: 'Sixth of the Dusk',                series: 'standalone', col: 7, row: 5, type: 'novella' },
+  { id: 'white_sand', title: 'White Sand',                                series: 'standalone', col: 0, row: 5, type: 'graphic' },
+  { id: 'shadows',    title: 'Shadows for Silence in the Forests of Hell', series: 'standalone', col: 1, row: 5, type: 'novella' },
+  { id: 'tress',      title: 'Tress of the Emerald Sea',                  series: 'standalone', col: 2, row: 5 },
+  { id: 'yumi',       title: 'Yumi and the Nightmare Painter',            series: 'standalone', col: 3, row: 5 },
+  { id: 'sunlit',     title: 'The Sunlit Man',                            series: 'standalone', col: 4, row: 5 },
+  { id: 'sixth',      title: 'Sixth of the Dusk',                         series: 'standalone', col: 5, row: 5, type: 'novella' },
+  { id: 'emberdark',  title: 'Isles of the Emberdark',                    series: 'standalone', col: 6, row: 5 },
 ];
 
 // [from, to, soft?]  hard edges gate "next"; soft edges are visual only.
 const EDGES = [
-  ['elantris', 'emperors_soul'],
+  // Elantris
+  ['elantris', 'hope_of_elantris'],
 
+  // Mistborn Era 1
   ['tfe', 'woa'], ['woa', 'hoa'],
+  ['hoa', 'secret_history'],
+  ['bom', 'secret_history', true],
+
+  // Era 1 → Era 2
   ['hoa', 'aol'],
+
+  // Mistborn Era 2 (Wax & Wayne)
   ['aol', 'sos'], ['sos', 'bom'], ['bom', 'tlm'],
 
+  // Stormlight
   ['wok', 'wor'], ['wor', 'edgedancer'], ['edgedancer', 'oathbringer'],
   ['oathbringer', 'dawnshard'], ['dawnshard', 'row'], ['row', 'wat'],
 
+  // Cross-series soft recommendations
   ['warbreaker', 'wor', true],
   ['hoa',        'wor', true],
   ['wor',        'tress', true],
-  ['row',        'sunlit'],
   ['row',        'yumi', true],
   ['tlm',        'wat',  true],
+
+  // Hard cross-series (spoiler-level)
+  ['row', 'sunlit'],
+  ['sixth', 'emberdark'],
 ];
 
 const CELL_W = 200;
@@ -363,14 +381,25 @@ function arrowPath(a, b) {
     return `M${ax},${ay} L${bx - 2},${by}`;
   }
 
-  // Different row: route bottom → top with a smooth S-curve
+  // Target below: bottom of source → top of target
+  if (b.row > a.row) {
+    const ax = pa.x + BOOK_W / 2;
+    const ay = pa.y + BOOK_H;
+    const bx = pb.x + BOOK_W / 2;
+    const by = pb.y;
+    const dy = by - ay;
+    const c  = Math.max(28, Math.abs(dy) * 0.5);
+    return `M${ax},${ay} C${ax},${ay + c} ${bx},${by - c} ${bx},${by - 2}`;
+  }
+
+  // Target above: top of source → bottom of target
   const ax = pa.x + BOOK_W / 2;
-  const ay = pa.y + BOOK_H;
+  const ay = pa.y;
   const bx = pb.x + BOOK_W / 2;
-  const by = pb.y;
-  const dy = by - ay;
+  const by = pb.y + BOOK_H;
+  const dy = ay - by;
   const c  = Math.max(28, Math.abs(dy) * 0.5);
-  return `M${ax},${ay} C${ax},${ay + c} ${bx},${by - c} ${bx},${by - 2}`;
+  return `M${ax},${ay} C${ax},${ay - c} ${bx},${by + c} ${bx},${by + 2}`;
 }
 
 function render() {
@@ -431,7 +460,8 @@ function render() {
 
     const tag = document.createElement('div');
     tag.className = 'series-tag';
-    tag.textContent = SERIES[b.series].name + (b.type === 'novella' ? ' · Novella' : '');
+    const typeLabel = { novella: ' · Novella', graphic: ' · Graphic Novel' }[b.type] || '';
+    tag.textContent = SERIES[b.series].name + typeLabel;
 
     const title = document.createElement('div');
     title.className = 'title';
